@@ -6,7 +6,7 @@
 # 3/27/18 - sersplit() function created and tested with Arduino Nano
 # 3/28/18 3:00 - added loc_callback(), heading_callback(), and Pixhawk connections
 # 3/28/18 13:07 - added arm_and_takeoff() and populated variables
-#
+# 3/30/18 - edited next_waypoint() so that it might actually work
 #
 #
 #
@@ -15,9 +15,12 @@ import serial
 import time
 from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
 from pymavlink import mavutil
-from numpy import matrixlib
+from numpy import matrixlib, cumsum #Only cumsum if doing a moving average on sensor data
 
     ## ---------Variables that need to be populated---------
+    
+avoid = True # Turns on obstacle avoidance when True
+avoid_dst = 100 # Number of cm away from copter that obstacle avoidance will be triggered
 
 targalt = 6 # target altitude that vehicle will fly at (meters)
 
@@ -37,7 +40,7 @@ wplist = [[1,38.9260971,-92.3299813,targalt], # list format: [wp#,lat,lon,alt]
 
     ## ---------Various Functions---------
 
-def sersplit(sens): # Function that takes the serial stream and translates into nsew
+def sersplit(sens): # Function that takes the serial stream and translates into NSEW
     if sens.startswith('#'): #and sens1.endswith('$'): Had to take out endswith due to unknown char
         sens1 = sens.partition('#')[-1].rpartition('$')[0] #removes start and end symbol
         global n,s,e,w
@@ -46,8 +49,21 @@ def sersplit(sens): # Function that takes the serial stream and translates into 
         print ("s=" + s) # arduino pin #6
         print ("e=" + e) # arduino pin #7
         print ("w=" + w) # arduino pin #8
+        
+        if n < avoid_dst or s < avoid_dst or e < avoid_dst or w < avoid_dst:
+            detected = True
+            obstacle_sensed()
+        
+        else:
+            detected = False
+            
     else:
         print ("Improper format or no connection")
+        
+    if detected = True:
+        return True
+    elif detected = False
+        return False
 
 def location_callback(self, attr_name, value): # gets location and returns string
     #global locstr
@@ -112,19 +128,20 @@ def get_distance_metres(aLocation1, aLocation2):
     dlong = aLocation2.lon - aLocation1.lon
     return math.sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5
 
-def next_waypoint(wp) # Function to go to next wp until within 2m
+def next_waypoint(wp): # Function to go to next wp until within 2m
     wpnum = 0
     wp = wplist[wpnum[1:3]]
-    while obstacle_sensed() is False: #obstacle_sensed() should return false while no readings
+    while detected is False: # detected should return false while no readings
        
         while get_distance_metres(location_callback(), wplist[wpnum[1:3]]) >= 2: # want to measure diff between current loc and next wp
             Vehicle.simple_goto(wplist[wpnum[1:3]])
             
-            if wplist[wpnum[0]]-len(wplist) > 0:
+            if wplist[wpnum[0]]-len(wplist) > 0: # Determines if this is the last waypoint
                 print 'Traveling to waypoint: ' + str(wplist[wpnum])
             
-            elif wplist[wpnum[0]]-len(wplist) = 0:
+            elif wplist[wpnum[0]]-len(wplist) = 0: # Determines if this is the last waypoint
                 print 'Traveling to final waypoint: ' + str(wplist[wpnum])
+        
         else:
             print 'Arrived at wapoint: ' + str(wplist[wpnum])
             if wplist[wpnum[0]]-len(wplist) > 0:
@@ -136,14 +153,26 @@ def next_waypoint(wp) # Function to go to next wp until within 2m
         
     else:
         print 'Obstacle detected. Delaying travel to wapoint #' + str(wpnum)
+        
+def obstacle_sensed(): # Function to do obstacle avoidance
+    while n < avoid_dst:
+    
+    while s < avoid_dst:
+        
+    while e < avoid_dst:
+        
+    while w < avoid_dst:
+        
+    
 
 ser=serial.Serial("/dev/ttyUSB0", 9600, timeout=5)  # Opens serial stream
-while True:
+while avoid = True:
     sersplit(ser.readline()) # Note: currently must restart shell to end stream. Don't close port
+else detected = False
 
     ## ---------Connecting to the Pixhawk---------
 
-vehicle=connect('/dev/serial0', baud=57600, wait_ready=False) # Connects to Pixhawk
+vehicle=connect('/dev/serial0', baud=57600, wait_ready=True) # Connects to Pixhawk
 
     ## ---------Adding location and heading listeners---------
 
