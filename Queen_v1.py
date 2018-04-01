@@ -24,14 +24,14 @@ avoid_dst = 100 # Number of cm away from copter that obstacle avoidance will be 
 
 targalt = 6 # target altitude that vehicle will fly at (meters)
 
-lat1 = 38.9260971 # Hardcoded waypoint targets
-lon1 = -92.3299813 # Need to figure out how to access these without hardcode
-lat2 = 38.9262390 # Something like a GUI
-lon2 = -92.3293698 # Or possibly a simple command via wifi connection
-lat3 = 38.9266980 # Wifi might be easiest since this copter (queen) will host a network
-lon3 = -92.3296380 # GUI with wireless mouse / keyboard might be quickest
-lat4 = 38.9265395 # Though it would be rather archaic
-lon4 = -92.3302549 #  <---- currently set to a rough square on Hinkson
+# lat1 = 38.9260971 # Hardcoded waypoint targets
+# lon1 = -92.3299813 # Need to figure out how to access these without hardcode
+# lat2 = 38.9262390 # Something like a GUI
+# lon2 = -92.3293698 # Or possibly a simple command via wifi connection
+# lat3 = 38.9266980 # Wifi might be easiest since this copter (queen) will host a network
+# lon3 = -92.3296380 # GUI with wireless mouse / keyboard might be quickest
+# lat4 = 38.9265395 # Though it would be rather archaic
+# lon4 = -92.3302549 #  <---- currently set to a rough square on Hinkson
 
 wplist = [[1,38.9260971,-92.3299813,targalt], # list format: [wp#,lat,lon,alt]
         [2,38.9262390,-92.3293698,targalt],
