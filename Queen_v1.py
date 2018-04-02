@@ -160,11 +160,12 @@ def obstacle_sensed(): # Function to do obstacle avoidance
     #while e < avoid_dst:  
     #while w < avoid_dst:
     '''
-    Using portion of old code:
+    Using portion of old code: ##### This whole portion needs fixing.
     XX should be avoid_dst
     s1 is west sensor
     s2 is 
         
+    '''
     if s2 < XX:
     if s1 < XX or s3 < XX:
 		
