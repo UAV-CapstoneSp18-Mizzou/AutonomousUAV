@@ -20,6 +20,7 @@ from numpy import matrixlib, cumsum #Only cumsum if doing a moving average on se
     ## ---------Variables that need to be populated---------
     
 avoid = True # Turns on obstacle avoidance when True
+headlock = True # Continually sets the vehicle heading to be compass north
 avoid_dst = 100 # Number of cm away from copter that obstacle avoidance will be triggered
 
 targalt = 6 # target altitude that vehicle will fly at (meters)
@@ -82,6 +83,27 @@ def heading_callback(self, attr_name, value): #gets heading and returns string
 
 
     ## ---------Vehicle Movement Functions---------
+	
+def condition_yaw(heading, relative=False):    # Function to set the heading of the vehicle.
+	''' May have something like while true: condition_yaw(0, False)
+		This would keep vehicle locked on true north for entire flight
+	'''
+    if relative:
+        is_relative=1 #yaw relative to direction of travel
+    else:
+        is_relative=0 #yaw is an absolute angle
+    # create the CONDITION_YAW command using command_long_encode()
+    msg = vehicle.message_factory.command_long_encode(
+        0, 0,    # target system, target component
+        mavutil.mavlink.MAV_CMD_CONDITION_YAW, #command
+        0, #confirmation
+        heading,    # param 1, yaw in degrees
+        0,          # param 2, yaw speed deg/s
+        1,          # param 3, direction -1 ccw, 1 cw
+        is_relative, # param 4, relative offset 1, absolute angle 0
+        0, 0, 0)    # param 5 ~ 7 not used
+    # send command to vehicle
+    vehicle.send_mavlink(msg)
 
 def arm_and_takeoff(targalt):
     """
@@ -166,44 +188,44 @@ def obstacle_sensed(): # Function to do obstacle avoidance
     s2 is 
         
     '''
-    if s2 < XX:
-    if s1 < XX or s3 < XX:
-		
-            if s1 > s3:	
-                print ("move left")                  # Move left function
-                send_ned_velocity(0, -0.5, 0)
-            else:
-                print ("move right")           # Move right function
-                send_ned_velocity(0, 0.5, 0, 1)
-	    
-    else:         # Move reverse function
-        print ("move reverse")
-        send_ned_velocity(-0.5, 0, 0, 1)
-	
-if s1< XX:                                 # Left check
+	if s2 < XX:
+	    if s1 < XX or s3 < XX:
 
-    if s2 < XX or s4 < XX:
-        if s2 > s4:                   # Move forward function
-            print ("move forwared")
-            send_ned_velocity(0.5, 0, 0, 1)
-        else:
-            send_ned_velocity(0.5,0, 0, 1)
-                    
-    else: # Move right funct
-        print ("Move Right")
-        send_ned_velocity(0, 0.5, 0, 1)
-        
-if s4 < XX:                    # Diag left check
-    if s1 < XX or s5 < XX:
-        if s1 > s5:              # move Diag right function
-            print ("Move Diag right")
-            send_ned_velocity(0.5, 0.5, 0, 1)
-        else:                  # Move diag back left function
-            print (" Move Back left")
-            send_ned_velocity(-0.5,-0.5 , 0, 1)
-    else:                      # Move diag back right function
-        print ("Move Diag balck right")
-        send_ned_velocity(-0.5, 0.5, 0, 1)
+		    if s1 > s3:	
+			print ("move left")                  # Move left function
+			send_ned_velocity(0, -0.5, 0)
+		    else:
+			print ("move right")           # Move right function
+			send_ned_velocity(0, 0.5, 0, 1)
+
+	    else:         # Move reverse function
+		print ("move reverse")
+		send_ned_velocity(-0.5, 0, 0, 1)
+
+	if s1< XX:                                 # Left check
+
+	    if s2 < XX or s4 < XX:
+		if s2 > s4:                   # Move forward function
+		    print ("move forwared")
+		    send_ned_velocity(0.5, 0, 0, 1)
+		else:
+		    send_ned_velocity(0.5,0, 0, 1)
+
+	    else: # Move right funct
+		print ("Move Right")
+		send_ned_velocity(0, 0.5, 0, 1)
+
+	if s4 < XX:                    # Diag left check
+	    if s1 < XX or s5 < XX:
+		if s1 > s5:              # move Diag right function
+		    print ("Move Diag right")
+		    send_ned_velocity(0.5, 0.5, 0, 1)
+		else:                  # Move diag back left function
+		    print (" Move Back left")
+		    send_ned_velocity(-0.5,-0.5 , 0, 1)
+	    else:                      # Move diag back right function
+		print ("Move Diag balck right")
+		send_ned_velocity(-0.5, 0.5, 0, 1)
         
     
 
@@ -211,6 +233,9 @@ ser=serial.Serial("/dev/ttyUSB0", 9600, timeout=5)  # Opens serial stream
 while avoid = True:
     sersplit(ser.readline()) # Note: currently must restart shell to end stream. Don't close port
 else detected = False
+
+while headlock = True:
+	condition_yaw(0, True)
 
     ## ---------Connecting to the Pixhawk---------
 
