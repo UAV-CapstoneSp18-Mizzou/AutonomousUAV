@@ -50,7 +50,7 @@ def sersplit(sens): # Function that takes the serial stream and translates into 
         print ("e=" + e) # arduino pin #7
         print ("w=" + w) # arduino pin #8
         
-        if n < avoid_dst or s < avoid_dst or e < avoid_dst or w < avoid_dst:
+        while n < avoid_dst or s < avoid_dst or e < avoid_dst or w < avoid_dst:
             detected = True
             obstacle_sensed()
         
@@ -155,13 +155,68 @@ def next_waypoint(wp): # Function to go to next wp until within 2m
         print 'Obstacle detected. Delaying travel to wapoint #' + str(wpnum)
         
 def obstacle_sensed(): # Function to do obstacle avoidance
-    while n < avoid_dst:
+    #while n < avoid_dst:        
+    #while s < avoid_dst:        
+    #while e < avoid_dst:  
+    #while w < avoid_dst:
+    '''
+    Using portion of old code:
+    XX should be avoid_dst
+    s1 is west sensor
+    s2 is 
+        
+    if s2 < XX:
+    if s1 < XX or s3 < XX:
+		
+            if s1 > s3:	
+                print ("Mode change - Manual")
+                vehicle.mode=VehicleMode("MANUAL")
+                print ("move left")                  # Move left function
+                send_ned_velocity(0, -0.5, 0)
+            else:
+                print ("Mode change - Manual")
+                vehicle.mode = VehicleMode("MANUAL")
+                print ("move right")           # Move right function
+                send_ned_velocity(0, 0.5, 0, 1)
+	    
+    else:
+        vehicle.mode = VehicleMode("MANUAL")
+        print ("Mode change - Manual")         # Move reverse function
+        print ("move reverse")
+        send_ned_velocity(-0.5, 0, 0, 1)
+		
+    vehicle.mode = VehicleMode("AUTO")
+    print ("Mode change - Auto")	
+
+if s1< XX:                                 # Left check
+    vehicle.mode = VehicleMode("MANUAL")
+    print ("Mode change - Manual")
     
-    while s < avoid_dst:
+    if s2 < XX or s4 < XX:
+        if s2 > s4:                   # Move forward function
+            print ("move forwared")
+            send_ned_velocity(0.5, 0, 0, 1)
+        else:
+            send_ned_velocity(0.5,0, 0, 1)
+                    
+    else: # Move right funct
+        print ("Move Right")
+        send_ned_velocity(0, 0.5, 0, 1)
+        vehicle.mode = VehicleMode("AUTO")
         
-    while e < avoid_dst:
-        
-    while w < avoid_dst:
+if s4 < XX:                    # Diag left check
+    vehicle.mode = VehicleMode("MANUAL")
+    print ("Mode change - Manual")
+    if s1 < XX or s5 < XX:
+        if s1 > s5:              # move Diag right function
+            print ("Move Diag right")
+            send_ned_velocity(0.5, 0.5, 0, 1)
+        else:                  # Move diag back left function
+            print (" Move Back left")
+            send_ned_velocity(-0.5,-0.5 , 0, 1)
+    else:                      # Move diag back right function
+        print ("Move Diag balck right")
+        send_ned_velocity(-0.5, 0.5, 0, 1)
         
     
 
