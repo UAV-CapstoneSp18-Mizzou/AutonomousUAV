@@ -1,0 +1,289 @@
+from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelative
+from pymavlink import mavutil # Needed for command message definitions
+#from __future__ import print_function
+import time
+import math
+
+
+
+#Set up option parsing to get connection string
+import argparse  
+parser = argparse.ArgumentParser(description='Control Copter and send commands in GUIDED mode ')
+parser.add_argument('--connect', 
+                   help="Vehicle connection target string. If not specified, SITL automatically started and used.")
+args = parser.parse_args()
+
+connection_string = args.connect
+sitl = None
+
+
+#Start SITL if no connection string specified
+if not connection_string:
+    import dronekit_sitl
+    sitl = dronekit_sitl.start_default()
+    connection_string = sitl.connection_string()
+
+
+# Connect to the Vehicle
+print ('Connecting to vehicle on: %s') # connection_string
+vehicle = connect(connection_string, wait_ready=True)
+
+
+
+# s1 = left sensor distance
+# s2 = forward sensor distance
+# s3 = right sensor distance
+# s4 =  front left sensor distance
+# s5 = front right sensor distance 
+ 
+# XX = Safety distance (in cm)
+
+XX = 200
+
+# Define Functions
+
+def send_ned_velocity(velocity_x, velocity_y, velocity_z, duration):
+	
+    #Move vehicle in direction based on specified velocity vectors.
+    
+    msg = vehicle.message_factory.set_position_target_local_ned_encode(
+        0,       # time_boot_ms (not used)
+        0, 0,    # target system, target component
+        mavutil.mavlink.MAV_FRAME_BODY_OFFSET_NED, # frame
+        0b0000111111000111, # type_mask (only speeds enabled)
+        0, 0, 0, # x, y, z positions (not used)
+        velocity_x, velocity_y, velocity_z, # x, y, z velocity in m/s
+        0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
+        0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
+
+
+    # send command to vehicle on 1 Hz cycle
+    for x in range(0,duration):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
+
+def goto_position_target_local_ned(north, east, down):
+    #Send SET_POSITION_TARGET_LOCAL_NED command to request the vehicle fly to a specified
+    #location in the North, East, Down frame.
+    msg = vehicle.message_factory.set_position_target_local_ned_encode(
+        0,       # time_boot_ms (not used)
+        0, 0,    # target system, target component
+        mavutil.mavlink.MAV_FRAME_LOCAL_NED, # frame
+        0b0000111111111000, # type_mask (only positions enabled)
+        north, east, down,
+        0, 0, 0, # x, y, z velocity in m/s  (not used)
+        0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
+        0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
+    # send command to vehicle
+    vehicle.send_mavlink(msg)
+    
+def condition_yaw(heading, relative=False):
+    #Send MAV_CMD_CONDITION_YAW message to point vehicle at a specified heading (in degrees).
+
+    #This method sets an absolute heading by default, but you can set the `relative` parameter
+    #to `True` to set yaw relative to the current yaw heading.
+
+    #By default the yaw of the vehicle will follow the direction of travel. After setting 
+    #the yaw using this function there is no way to return to the default yaw "follow direction 
+    #of travel" behaviour (https://github.com/diydrones/ardupilot/issues/2427)
+
+    #For more information see: 
+    #http://copter.ardupilot.com/wiki/common-mavlink-mission-command-messages-mav_cmd/	#mav_cmd_condition_yaw
+    if relative:
+        is_relative = 1 #yaw relative to direction of travel
+    else:
+        is_relative = 0 #yaw is an absolute angle
+    # create the CONDITION_YAW command using command_long_encode()
+    msg = vehicle.message_factory.command_long_encode(
+        0, 0,    # target system, target component
+        mavutil.mavlink.MAV_CMD_CONDITION_YAW, #command
+        0, #confirmation
+        heading,    # param 1, yaw in degrees
+        0,          # param 2, yaw speed deg/s
+        1,          # param 3, direction -1 ccw, 1 cw
+        is_relative, # param 4, relative offset 1, absolute angle 0
+        0, 0, 0)    # param 5 ~ 7 not used
+    # send command to vehicle
+    vehicle.send_mavlink(msg)    
+    
+def get_location_metres(original_location, dNorth, dEast):
+
+    #Returns a LocationGlobal object containing the latitude/longitude `dNorth` and `dEast` metres from the 
+    #specified `original_location`. The returned LocationGlobal has the same `alt` value
+    #as `original_location`.
+
+    #The function is useful when you want to move the vehicle around specifying locations relative to 
+    #the current vehicle position.
+
+    #The algorithm is relatively accurate over small distances (10m within 1km) except close to the poles.
+
+    #For more information see:
+    #http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+    earth_radius = 6378137.0 #Radius of "spherical" earth
+    #Coordinate offsets in radians
+    dLat = dNorth/earth_radius
+    dLon = dEast/(earth_radius*math.cos(math.pi*original_location.lat/180))
+
+    #New position in decimal degrees
+    newlat = original_location.lat + (dLat * 180/math.pi)
+    newlon = original_location.lon + (dLon * 180/math.pi)
+    if type(original_location) is LocationGlobal:
+        targetlocation=LocationGlobal(newlat, newlon,original_location.alt)
+    elif type(original_location) is LocationGlobalRelative:
+        targetlocation=LocationGlobalRelative(newlat, newlon,original_location.alt)
+    else:
+        raise Exception("Invalid Location object passed")
+        
+    return targetlocation;
+
+
+def fire_sensors():
+
+    #from __future__ import print_function
+    import time
+    import RPi.GPIO as GPIO1
+    import RPi.GPIO as GPIO2
+    import RPi.GPIO as GPIO3
+    import RPi.GPIO as GPIO4
+    import RPi.GPIO as GPIO5
+
+    GPIO1.setmode(GPIO1.BCM)
+    GPIO2.setmode(GPIO2.BCM)
+    GPIO3.setmode(GPIO3.BCM)
+    GPIO4.setmode(GPIO4.BCM)
+    GPIO5.setmode(GPIO5.BCM)
+
+    GPIO_TRIGGER1 = 12
+    GPIO_ECHO1    = 16
+    GPIO_TRIGGER2 = 17
+    GPIO_ECHO2    = 27
+    GPIO_TRIGGER3 = 22
+    GPIO_ECHO3    = 5
+    GPIO_TRIGGER4 = 6
+    GPIO_ECHO4    = 13
+    GPIO_TRIGGER5 = 6
+    GPIO_ECHO5    = 13
+
+    # Speed of sound in cm/s at temperature
+    temperature = 20
+    speedSound = 33100 + (0.6*temperature)
+
+    print("Ultrasonic Measurement")
+    print("Speed of sound is",speedSound/100,"m/s at ",temperature,"deg")
+
+
+
+    sensorarray=[1,2,3,4,5]
+    print (sensorarray)
+    dist=[0,0,0,0,0]
+    distance=['Distance1','Distance2','Distance3','Distance4','Distance5']
+    echoarray=[GPIO_ECHO1,GPIO_ECHO2,GPIO_ECHO3,GPIO_ECHO4,GPIO_ECHO5]
+    trigarray=[GPIO_TRIGGER1,GPIO_TRIGGER2,GPIO_TRIGGER3,GPIO_TRIGGER4,GPIO_TRIGGER5]
+    gpioarray=[GPIO1,GPIO2,GPIO3,GPIO4,GPIO5]
+
+
+
+    for i in range(0,5):
+        gpioarray[i].setup(trigarray[i],gpioarray[i].OUT)  # Trigger
+        gpioarray[i].setup(echoarray[i],gpioarray[i].IN)      # Echo
+
+
+        gpioarray[i].output(trigarray[i], False)                 #Set TRIG as LOW\
+        print ("Waitng For Sensor To Settle")
+        time.sleep(.1)                            #Delay of .2 seconds
+    
+        gpioarray[i].output(trigarray[i], True)                  #Set TRIG as HIGH
+    
+        time.sleep(0.00001)                      #Delay of 0.00001 seconds
+        gpioarray[i].output(trigarray[i], False)                 #Set TRIG as LOW
+    
+        while gpioarray[i].input(echoarray[i])==0:               #Check whether the ECHO is LOW
+            pulse_start = time.time()              #Saves the last known time of LOW pulse
+
+        while GPIO1.input(echoarray[i])==1:               #Check whether the ECHO is HIGH
+            pulse_end = time.time()                #Saves the last known time of HIGH pulse
+    
+        pulse_duration = pulse_end - pulse_start
+        dist[i] = pulse_duration * 17150        #Multiply pulse duration by 17150 to get distance
+        dist[i] = round(dist[i], 2)            #Round to two decimal points
+
+        #print (distance[i],dist[i],"cm")
+    
+        #display out of range
+        if dist[i]> 2 and dist[i] < 400:      #Check whether the distance is within range
+            print (distance[i],dist[i] - 0.5,"cm")  #Print distance with 0.5 cm calibration
+        else:
+            print ("Out Of Range")                   #display out of range
+    
+    
+
+    
+# Obstacle Avoidance
+
+# Sensor setup
+
+
+# OA 
+
+    
+c=count;    
+max=count
+print ("max")
+next
+now=next
+print ("now")
+fire_sensors()
+
+	# Front check
+if s2 < XX:
+    if s1 < XX or s3 < XX:
+		
+            if s1 > s3:	
+                print ("Mode change - Manual")
+                vehicle.mode=VehicleMode("MANUAL")
+                print ("move left")                  # Move left function
+                send_ned_velocity(0, -0.5, 0)
+            else:
+                print ("Mode change - Manual")
+                vehicle.mode = VehicleMode("MANUAL")
+                print ("move right")           # Move right function
+                send_ned_velocity(0, 0.5, 0, 1)
+	    
+    else:
+        vehicle.mode = VehicleMode("MANUAL")
+        print ("Mode change - Manual")         # Move reverse function
+        print ("move reverse")
+        send_ned_velocity(-0.5, 0, 0, 1)
+		
+    vehicle.mode = VehicleMode("AUTO")
+    print ("Mode change - Auto")	
+
+if s1< XX:                                 # Left check
+    vehicle.mode = VehicleMode("MANUAL")
+    print ("Mode change - Manual")
+    
+    if s2 < XX or s4 < XX:
+        if s2 > s4:                   # Move forward function
+            print ("move forwared")
+            send_ned_velocity(0.5, 0, 0, 1)
+        else:
+            send_ned_velocity(0.5,0, 0, 1)
+                    
+    else: # Move right funct
+        print ("Move Right")
+        send_ned_velocity(0, 0.5, 0, 1)
+        vehicle.mode = VehicleMode("AUTO")
+        
+if s4 < XX:                    # Diag left check
+    vehicle.mode = VehicleMode("MANUAL")
+    print ("Mode change - Manual")
+    if s1 < XX or s5 < XX:
+        if s1>s5:              # move Diag right function
+            print ("Move Diag right")
+            send_ned_velocity(0.5, 0.5, 0, 1)
+        else:                  # Move diag back left function
+            print (" Move Back left")
+            send_ned_velocity(-0.5,-0.5 , 0, 1)
+    else:                      # Move diag back right function
+        print ("Move Diag balck right")
+        send_ned_velocity(-0.5, 0.5, 0, 1)
