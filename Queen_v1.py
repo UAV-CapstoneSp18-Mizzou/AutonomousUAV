@@ -170,29 +170,18 @@ def obstacle_sensed(): # Function to do obstacle avoidance
     if s1 < XX or s3 < XX:
 		
             if s1 > s3:	
-                print ("Mode change - Manual")
-                vehicle.mode=VehicleMode("MANUAL")
                 print ("move left")                  # Move left function
                 send_ned_velocity(0, -0.5, 0)
             else:
-                print ("Mode change - Manual")
-                vehicle.mode = VehicleMode("MANUAL")
                 print ("move right")           # Move right function
                 send_ned_velocity(0, 0.5, 0, 1)
 	    
-    else:
-        vehicle.mode = VehicleMode("MANUAL")
-        print ("Mode change - Manual")         # Move reverse function
+    else:         # Move reverse function
         print ("move reverse")
         send_ned_velocity(-0.5, 0, 0, 1)
-		
-    vehicle.mode = VehicleMode("AUTO")
-    print ("Mode change - Auto")	
-
+	
 if s1< XX:                                 # Left check
-    vehicle.mode = VehicleMode("MANUAL")
-    print ("Mode change - Manual")
-    
+
     if s2 < XX or s4 < XX:
         if s2 > s4:                   # Move forward function
             print ("move forwared")
@@ -203,11 +192,8 @@ if s1< XX:                                 # Left check
     else: # Move right funct
         print ("Move Right")
         send_ned_velocity(0, 0.5, 0, 1)
-        vehicle.mode = VehicleMode("AUTO")
         
 if s4 < XX:                    # Diag left check
-    vehicle.mode = VehicleMode("MANUAL")
-    print ("Mode change - Manual")
     if s1 < XX or s5 < XX:
         if s1 > s5:              # move Diag right function
             print ("Move Diag right")
