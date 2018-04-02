@@ -19,7 +19,7 @@ void setup()
 
 void loop()
 {
-
+//hi, lets fly.
   //Now reading the physical pwm values
   pulse1 = pulseIn(pwPin1, HIGH);
   pulse2 = pulseIn(pwPin2, HIGH);
