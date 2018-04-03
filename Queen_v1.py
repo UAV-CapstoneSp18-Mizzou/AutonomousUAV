@@ -176,6 +176,27 @@ def next_waypoint(wp): # Function to go to next wp until within 2m
     else:
         print 'Obstacle detected. Delaying travel to wapoint #' + str(wpnum)
         
+	
+def send_ned_velocity(velocity_x, velocity_y, velocity_z, duration):
+    """
+    Move vehicle in direction based on specified velocity vectors.
+    """
+    msg = vehicle.message_factory.set_position_target_local_ned_encode(
+        0,       # time_boot_ms (not used)
+        0, 0,    # target system, target component
+        mavutil.mavlink.MAV_FRAME_LOCAL_NED, # frame
+        0b0000111111000111, # type_mask (only speeds enabled)
+        0, 0, 0, # x, y, z positions (not used)
+        velocity_x, velocity_y, velocity_z, # x, y, z velocity in m/s
+        0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
+        0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
+
+
+    # send command to vehicle on 1 Hz cycle
+    for x in range(0,duration):
+        vehicle.send_mavlink(msg)
+        time.sleep(1)
+	
 def obstacle_sensed(): # Function to do obstacle avoidance
     #while n < avoid_dst:        
     #while s < avoid_dst:        
@@ -186,25 +207,89 @@ def obstacle_sensed(): # Function to do obstacle avoidance
     XX should be avoid_dst
     s1 is west sensor
     s2 is 
-        
+    
+    # assuming we UAV is continuously set to true north
     '''
-	if s2 < XX:
-	    if s1 < XX or s3 < XX:
+# CHECK FORWARD/NORTH
+	while n < avoid_dst:
+		if w > avoid_dst or e > avoid_dst:
+			if w > e:
+				print ("move west")
+				send_ned_velocity(0, -0.5, 0, 1)
+			else:
+				print ("move east")
+				send_ned_velocity(0, 0.5, 0, 1)
+	    	else:
+			print ("move reverse")
+			send_ned_velocity(-0.5, 0, 0, 1)
 
-		    if s1 > s3:	
-			print ("move left")                  # Move left function
-			send_ned_velocity(0, -0.5, 0)
-		    else:
-			print ("move right")           # Move right function
+# CHECK FORWARD/NORTH
+	while n < avoid_dst:
+		# object north
+		if w > avoid_dst and e > avoid_dst and s > avoid_dst:
+			if w > e and w > s
+				print ("move west")
+				send_ned_velocity(0, -0.5, 0, 1)
+			elif e > w and e > s
+				print ("move east")
+				send_ned_velocity(0, 0.5, 0, 1)
+			elif s > w and s > e
+				print ("move south")
+				send_ned_velocity(-0.5, 0, 0, 1)
+			else:
+				# moves right if some of the statements are equal
+				print ("move east")
+				send_ned_velocity(0, 0.5, 0,1)
+		# object north and south
+		elif w > avoid_dst and e > avoid_dst and s < avoid_dst:
+			if w > e:
+				print ("move west")
+				send_ned_velocity(0, -0.5, 0, 1)
+			else:
+				print ("move east")
+				send_ned_velocity(0, 0.5, 0, 1)
+		# object north and east
+		elif w > avoid_dst and e < avoid_dst and s > avoid_dst:
+			if s > w:
+				print ("move south")
+				send_ned_velocity(-0.5, 0, 0, 1)
+			else:
+				print ("move west")
+				send_ned_velocity(0, -0.5, 0, 1)
+		# object north and west
+		elif w < avoid_dst and e > avoid_dst and s > avoid_dst:
+			if s > e:
+				print ("move south")
+				send_ned_velocity(-0.5, 0, 0, 1)
+			else:
+				print ("move east")
+				send_ned_velocity(0, 0.5, 0, 1)
+		# object north, west, east
+		elif w < avoid_dst and e < avoid_dst and s > avoid_dst:
+			print ("move south")
+			send_ned_velocity(-0.5, 0, 0, 1)
+		# object north, south, west
+		elif w < avoid_dst and s < avoid_dst and e > avoid_dst:
+			print ("move east")
 			send_ned_velocity(0, 0.5, 0, 1)
+		# object north, south, east
+		elif s < avoid_dst and e < avoid_dst and w > avoid_dst:
+			print ("move west")
+			send_ned_velocity(0, -0.5, 0, 1)
+		# every side detects obstacles within safe distance
+		elif w < avoid_dst and e < avoid_dst and s < avoid_dst:
+			print ("surrounded")
+	
+		
+			
+			
+			
+			
+			
+# CHECK LEFT/WEST			
+	while w < avoid_dst:
 
-	    else:         # Move reverse function
-		print ("move reverse")
-		send_ned_velocity(-0.5, 0, 0, 1)
-
-	if s1< XX:                                 # Left check
-
-	    if s2 < XX or s4 < XX:
+	    if s2 < avoid_dst or s4 < avoid_dst:
 		if s2 > s4:                   # Move forward function
 		    print ("move forwared")
 		    send_ned_velocity(0.5, 0, 0, 1)
@@ -215,8 +300,8 @@ def obstacle_sensed(): # Function to do obstacle avoidance
 		print ("Move Right")
 		send_ned_velocity(0, 0.5, 0, 1)
 
-	if s4 < XX:                    # Diag left check
-	    if s1 < XX or s5 < XX:
+	if s4 < avoid_dst:                    # Diag left check
+	    if s1 < avoid_dst or s5 < avoid_dst:
 		if s1 > s5:              # move Diag right function
 		    print ("Move Diag right")
 		    send_ned_velocity(0.5, 0.5, 0, 1)
