@@ -53,7 +53,7 @@ def sersplit(sens): # Function that takes the serial stream and translates into 
         
         while n < avoid_dst or s < avoid_dst or e < avoid_dst or w < avoid_dst:
             detected = True
-            obstacle_sensed()
+            obstacle_sensed(n, s, e, w)
         
         else:
             detected = False
@@ -175,7 +175,21 @@ def next_waypoint(wp): # Function to go to next wp until within 2m
         
     else:
         print 'Obstacle detected. Delaying travel to wapoint #' + str(wpnum)
-        
+
+def get_bearing(aLocation1, aLocation2):
+    """
+    Returns the bearing between the two LocationGlobal objects passed as parameters.
+
+    This method is an approximation, and may not be accurate over large distances and close to the 
+    earth's poles. It comes from the ArduPilot test code: 
+    https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
+    """	
+    off_x = aLocation2.lon - aLocation1.lon
+    off_y = aLocation2.lat - aLocation1.lat
+    bearing = 90.00 + math.atan2(-off_y, off_x) * 57.2957795
+    if bearing < 0:
+        bearing += 360.00
+    return bearing;        
 	
 def send_ned_velocity(velocity_x, velocity_y, velocity_z, duration):
     """
@@ -197,7 +211,7 @@ def send_ned_velocity(velocity_x, velocity_y, velocity_z, duration):
         vehicle.send_mavlink(msg)
         time.sleep(1)
 	
-def obstacle_sensed(): # Function to do obstacle avoidance
+def obstacle_sensed(n, s, e, w): # Function to do obstacle avoidance
     #while n < avoid_dst:        
     #while s < avoid_dst:        
     #while e < avoid_dst:  
@@ -237,151 +251,154 @@ def obstacle_sensed(): # Function to do obstacle avoidance
 # trying to lump everything into a single while loop
 # there are 15 different combinations, this will address them each individually
 # we can try to make it more concise later as we troubleshoot
-	while n < avoid_dst or w < avoid_dst or e < avoid_dst or s < avoid_dst:
-		
-		# checking if object detected in 1 DIRECTION
-		if n < avoid_dst and w > avoid_dst and e > avoid_dst and s > avoid_dst:
-			print ("Object detected north")
-			if w > e and w > s:
-				send_ned_velocity(0, -0.5, 0, 1)
-				print ("Move west")
-			elif e > w and e > s:
-				send_ned_velocity(0, 0.5, 0, 1)
-				print ("Move east")
-			elif s > e and s > w:
+	while avoid == True:
+		get_bearing(vehicle.location.global_frame, next_waypoint(wp))	# should determine the bearing to the next wp
+		while n < avoid_dst or w < avoid_dst or e < avoid_dst or s < avoid_dst:
+# If the next wp is north: bearing 0 to 90 or 270 to 360
+# If the next wp is south: bearing 90 to 180
+			# checking if object detected in 1 DIRECTION
+			if n < avoid_dst and w > avoid_dst and e > avoid_dst and s > avoid_dst:
+				print ("Object detected north")
+				if w > e and w > s:
+					send_ned_velocity(0, -0.5, 0, 1)
+					print ("Move west")
+				elif e > w and e > s:
+					send_ned_velocity(0, 0.5, 0, 1)
+					print ("Move east")
+				elif s > e and s > w:
+					send_ned_velocity(-0.5, 0, 0, 1)
+					print ("Move south")
+				else:
+					send_ned_velocity(0, 0.5, 0, 1)		# sending east in the event that some are equal
+			elif w < avoid_dst and n > avoid_dst and e > avoid_dst and s > avoid_dst:
+				print ("Object detected west")
+				if n > e and n > s:
+					send_ned_velocity(0.5, 0, 0, 1)
+					print ("Move north")
+				elif e > n and e > s:
+					send_ned_velocity(0, 0.5, 0, 1)
+					print ("Move east")
+				elif s > e and s > n:
+					send_ned_velocity(-0.5, 0, 0, 1)
+					print ("Move south")
+				else:
+					send_ned_velocity(0.5, 0, 0, 1)		# sending north in the event that some are equal
+			elif e < avoid_dst and n > avoid_dst and w > avoid_dst and s > avoid_dst:
+				print ("Object detected east")
+				if n > w and n > s:
+					send_ned_velocity(0.5, 0, 0, 1)
+					print ("Move north")
+				elif w > n and w > s:
+					send_ned_velocity(0, -0.5, 0, 1)
+					print ("Move west")
+				elif s > n and s > w:
+					send_ned_velocity(-0.5, 0, 0, 1)
+					print ("Move south")
+				else:
+					send_ned_velocity(0.5, 0, 0, 1)		# sending north in the event that some are equal
+			elif s < avoid_dst and n > avoid_dst and e > avoid_dst and w > avoid_dst:
+				print ("Object detected south")
+				if n > e and n > w:
+					send_ned_velocity(0.5, 0, 0, 1)
+					print ("Move north")
+				elif e > w and e > n:
+					send_ned_velocity(0, 0.5, 0, 1)
+					print ("Move east")
+				elif w > e and w > n:
+					send_ned_velocity(0, -0.5, 0, 1)
+					print ("Move west")
+				else:
+					send_ned_velocity(0, 0.5, 0, 1)		# sending east in the event that some are equal
+
+			# checking if object detected in 2 DIRECTIONS
+			elif n < avoid_dst and e < avoid_dst and w > avoid_dst and s > avoid_dst:
+				print ("Object detected north and east")
+				if w > s:
+					send_ned_velocity(0, -0.5, 0, 1)
+					print ("Move west")
+				elif s > w:
+					send_ned_velocity(-0.5, 0, 0, 1)
+					print ("Move south")
+				else:
+					send_ned_velocity(0, -0.5, 0, 1)
+			elif n < avoid_dst and w < avoid_dst and e > avoid_dst and s > avoid_dst:
+				print ("Object detected north and west")
+				if e > s:
+					send_ned_velocity(0, 0.5, 0, 1)
+					print ("Move east")
+				elif s > e:
+					send_ned_velocity(-0.5, 0, 0, 1)
+					print ("Move south")
+				else:
+					send_ned_velocity(0, 0.5, 0, 1)
+			elif n < avoid_dst and s < avoid_dst and e > avoid_dst and w > avoid_dst:
+				print ("Object detected north and south")
+				if e > w:
+					send_ned_velocity(0, 0.5, 0, 1)
+					print ("Move east")
+				elif w > e:
+					send_ned_velocity(0, -0.5, 0, 1)
+					print ("Move west")
+				else:
+					send_ned_velocity(0, 0.5, 0, 1)
+			elif e < avoid_dst and w < avoid_dst and n > avoid_dst and s > avoid_dst:
+				print ("Object detected east and west")
+				if n > s:
+					send_ned_velocity(0.5, 0, 0, 1)
+					print ("Move north")
+				elif s > n:
+					send_ned_velocity(-0.5, 0, 0, 1)
+					print ("Move south")
+				else:
+					send_ned_velocity(0.5, 0, 0, 1)
+			elif e < avoid_dst and s < avoid_dst and n > avoid_dst and w > avoid_dst:
+				print ("Object detected east and south")
+				if n > w:
+					send_ned_velocity(0.5, 0, 0, 1)
+					print ("Move north")
+				elif w > n:
+					send_ned_velocity(0, -0.5, 0, 1)
+					print ("Move west")
+				else:
+					send_ned_velocity(0.5, 0, 0, 1)
+			elif w < avoid_dst and s < avoid_dst and n > avoid_dst and e > avoid_dst:
+				print ("Object detected west and south")
+				if n > e:
+					send_ned_velocity(0.5, 0, 0, 1)
+					print ("Move north")
+				elif e > n:
+					send_ned_velocity(0, 0.5, 0, 1)
+					print ("Move east")
+				else:
+					send_ned_velocity(0.5, 0, 0, 1)
+
+			# checking if object detected in 3 DIRECTIONS
+			elif n < avoid_dst and e < avoid_dst and w< avoid_dst and s > avoid_dst:
+				print ("Object detected north, east, and west")
 				send_ned_velocity(-0.5, 0, 0, 1)
 				print ("Move south")
-			else:
-				send_ned_velocity(0, 0.5, 0, 1)		# sending east in the event that some are equal
-		elif w < avoid_dst and n > avoid_dst and e > avoid_dst and s > avoid_dst:
-			print ("Object detected west")
-			if n > e and n > s:
-				send_ned_velocity(0.5, 0, 0, 1)
-				print ("Move north")
-			elif e > n and e > s:
-				send_ned_velocity(0, 0.5, 0, 1)
-				print ("Move east")
-			elif s > e and s > n:
-				send_ned_velocity(-0.5, 0, 0, 1)
-				print ("Move south")
-			else:
-				send_ned_velocity(0.5, 0, 0, 1)		# sending north in the event that some are equal
-		elif e < avoid_dst and n > avoid_dst and w > avoid_dst and s > avoid_dst:
-			print ("Object detected east")
-			if n > w and n > s:
-				send_ned_velocity(0.5, 0, 0, 1)
-				print ("Move north")
-			elif w > n and w > s:
+			elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w > avoid_dst:
+				print ("Object detected north, east, and south")
 				send_ned_velocity(0, -0.5, 0, 1)
 				print ("Move west")
-			elif s > n and s > w:
-				send_ned_velocity(-0.5, 0, 0, 1)
-				print ("Move south")
-			else:
-				send_ned_velocity(0.5, 0, 0, 1)		# sending north in the event that some are equal
-		elif s < avoid_dst and n > avoid_dst and e > avoid_dst and w > avoid_dst:
-			print ("Object detected south")
-			if n > e and n > w:
-				send_ned_velocity(0.5, 0, 0, 1)
-				print ("Move north")
-			elif e > w and e > n:
+			elif n < avoid_dst and s < avoid_dst and w < avoid_dst and e > avoid_dst:
+				print ("Object detected north, south, and west")
 				send_ned_velocity(0, 0.5, 0, 1)
 				print ("Move east")
-			elif w > e and w > n:
-				send_ned_velocity(0, -0.5, 0, 1)
-				print ("Move west")
-			else:
-				send_ned_velocity(0, 0.5, 0, 1)		# sending east in the event that some are equal
-		
-		# checking if object detected in 2 DIRECTIONS
-		elif n < avoid_dst and e < avoid_dst and w > avoid_dst and s > avoid_dst:
-			print ("Object detected north and east")
-			if w > s:
-				send_ned_velocity(0, -0.5, 0, 1)
-				print ("Move west")
-			elif s > w:
-				send_ned_velocity(-0.5, 0, 0, 1)
-				print ("Move south")
-			else:
-				send_ned_velocity(0, -0.5, 0, 1)
-		elif n < avoid_dst and w < avoid_dst and e > avoid_dst and s > avoid_dst:
-			print ("Object detected north and west")
-			if e > s:
-				send_ned_velocity(0, 0.5, 0, 1)
-				print ("Move east")
-			elif s > e:
-				send_ned_velocity(-0.5, 0, 0, 1)
-				print ("Move south")
-			else:
-				send_ned_velocity(0, 0.5, 0, 1)
-		elif n < avoid_dst and s < avoid_dst and e > avoid_dst and w > avoid_dst:
-			print ("Object detected north and south")
-			if e > w:
-				send_ned_velocity(0, 0.5, 0, 1)
-				print ("Move east")
-			elif w > e:
-				send_ned_velocity(0, -0.5, 0, 1)
-				print ("Move west")
-			else:
-				send_ned_velocity(0, 0.5, 0, 1)
-		elif e < avoid_dst and w < avoid_dst and n > avoid_dst and s > avoid_dst:
-			print ("Object detected east and west")
-			if n > s:
+			elif e < avoid_dst and s < avoid_dst and w < avoid_dst and n > avoid_dst:
+				print ("Object detected east, south, and west")
 				send_ned_velocity(0.5, 0, 0, 1)
 				print ("Move north")
-			elif s > n:
-				send_ned_velocity(-0.5, 0, 0, 1)
-				print ("Move south")
+
+			# checking if object detected in 4 DIRECTIONS
+			elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w < avoid_dst:
+				print ("Object detected north, east, south, and west")
+				print ("You are surrounded")
+				send_ned_velocity(0, 0, -0.5, 1)
+				print ("Move up")		# moves up if it is surrounded to go over the objects
+
 			else:
-				send_ned_velocity(0.5, 0, 0, 1)
-		elif e < avoid_dst and s < avoid_dst and n > avoid_dst and w > avoid_dst:
-			print ("Object detected east and south")
-			if n > w:
-				send_ned_velocity(0.5, 0, 0, 1)
-				print ("Move north")
-			elif w > n:
-				send_ned_velocity(0, -0.5, 0, 1)
-				print ("Move west")
-			else:
-				send_ned_velocity(0.5, 0, 0, 1)
-		elif w < avoid_dst and s < avoid_dst and n > avoid_dst and e > avoid_dst:
-			print ("Object detected west and south")
-			if n > e:
-				send_ned_velocity(0.5, 0, 0, 1)
-				print ("Move north")
-			elif e > n:
-				send_ned_velocity(0, 0.5, 0, 1)
-				print ("Move east")
-			else:
-				send_ned_velocity(0.5, 0, 0, 1)
-				
-		# checking if object detected in 3 DIRECTIONS
-		elif n < avoid_dst and e < avoid_dst and w< avoid_dst and s > avoid_dst:
-			print ("Object detected north, east, and west")
-			send_ned_velocity(-0.5, 0, 0, 1)
-			print ("Move south")
-		elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w > avoid_dst:
-			print ("Object detected north, east, and south")
-			send_ned_velocity(0, -0.5, 0, 1)
-			print ("Move west")
-		elif n < avoid_dst and s < avoid_dst and w < avoid_dst and e > avoid_dst:
-			print ("Object detected north, south, and west")
-			send_ned_velocity(0, 0.5, 0, 1)
-			print ("Move east")
-		elif e < avoid_dst and s < avoid_dst and w < avoid_dst and n > avoid_dst:
-			print ("Object detected east, south, and west")
-			send_ned_velocity(0.5, 0, 0, 1)
-			print ("Move north")
-		
-		# checking if object detected in 4 DIRECTIONS
-		elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w < avoid_dst:
-			print ("Object detected north, east, south, and west")
-			print ("You are surrounded")
-			send_ned_velocity(0, 0, -0.5, 1)
-			print ("Move up")		# moves up if it is surrounded to go over the objects
-			
-		else:
-			print ("The situation did not fall into any category--TROUBLESHOOT")
+				print ("The situation did not fall into any category--TROUBLESHOOT")
 			
 '''
 # CHECK FORWARD/NORTH
