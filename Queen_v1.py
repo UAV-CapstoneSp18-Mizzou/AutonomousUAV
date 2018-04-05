@@ -85,25 +85,27 @@ def heading_callback(self, attr_name, value): #gets heading and returns string
     ## ---------Vehicle Movement Functions---------
 	
 def condition_yaw(heading, relative=False):    # Function to set the heading of the vehicle.
-	''' May have something like while true: condition_yaw(0, False)
-		This would keep vehicle locked on true north for entire flight
-	'''
-    if relative:
-        is_relative=1 #yaw relative to direction of travel
-    else:
-        is_relative=0 #yaw is an absolute angle
+	msg = vehicle.message_factory.command_long_encode(0,0,mavutil.mavlink.MAV_CMD_CONDITION_YAW,0,heading,0,1,0,0,0,0)
+	vehicle.send_mavlink(msg)
+''' May have something like while true: condition_yaw(0, False)
+	This would keep vehicle locked on true north for entire flight
+'''
+#    if relative:
+#        is_relative=1 #yaw relative to direction of travel
+#    else:
+#        is_relative=0 #yaw is an absolute angle
     # create the CONDITION_YAW command using command_long_encode()
-    msg = vehicle.message_factory.command_long_encode(
-        0, 0,    # target system, target component
-        mavutil.mavlink.MAV_CMD_CONDITION_YAW, #command
-        0, #confirmation
-        heading,    # param 1, yaw in degrees
-        0,          # param 2, yaw speed deg/s
-        1,          # param 3, direction -1 ccw, 1 cw
-        is_relative, # param 4, relative offset 1, absolute angle 0
-        0, 0, 0)    # param 5 ~ 7 not used
+
+#        0, 0,    # target system, target component
+#        mavutil.mavlink.MAV_CMD_CONDITION_YAW, #command
+#        0, #confirmation
+#        heading,    # param 1, yaw in degrees
+#        0,          # param 2, yaw speed deg/s
+#        1,          # param 3, direction -1 ccw, 1 cw
+#        is_relative, # param 4, relative offset 1, absolute angle 0
+#        0, 0, 0)    # param 5 ~ 7 not used
     # send command to vehicle
-    vehicle.send_mavlink(msg)
+    
 
 def arm_and_takeoff(targalt):
     """
@@ -161,7 +163,7 @@ def next_waypoint(wp): # Function to go to next wp until within 2m
             if wplist[wpnum[0]]-len(wplist) > 0: # Determines if this is the last waypoint
                 print 'Traveling to waypoint: ' + str(wplist[wpnum])
             
-            elif wplist[wpnum[0]]-len(wplist) = 0: # Determines if this is the last waypoint
+            elif wplist[wpnum[0]]-len(wplist) == 0: # Determines if this is the last waypoint
                 print 'Traveling to final waypoint: ' + str(wplist[wpnum])
         
         else:
