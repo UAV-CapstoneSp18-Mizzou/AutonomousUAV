@@ -43,3 +43,10 @@ sock.bind((UDP_IP, UDP_PORT))
 while True:
     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
     print "received message:", data
+
+
+'''
+https://www.raspberrypi.org/forums/viewtopic.php?t=50070
+https://support.holmsecurity.com/hc/en-us/articles/212963869-What-is-the-difference-between-TPC-and-UDP-
+https://wiki.python.org/moin/UdpCommunication
+'''
