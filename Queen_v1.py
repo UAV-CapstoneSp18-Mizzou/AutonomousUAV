@@ -17,11 +17,21 @@ from dronekit import connect, VehicleMode, LocationGlobal, LocationGlobalRelativ
 from pymavlink import mavutil
 from numpy import matrixlib, cumsum #Only cumsum if doing a moving average on sensor data
 
+    ## ---------Connecting to the Pixhawk---------
+
+vehicle=connect('/dev/serial0', baud=57600, wait_ready=True) # Connects to Pixhawk
+#while True:
+print " Autopilot Firmware version: %s" % vehicle.version
+vehicle.mode = VehicleMode("GUIDED")
+print vehicle.is_armable
+
+
     ## ---------Variables that need to be populated---------
     
 avoid = True # Turns on obstacle avoidance when True
+detected = True
 headlock = True # Continually sets the vehicle heading to be compass north
-avoid_dst = 100 # Number of cm away from copter that obstacle avoidance will be triggered
+avoid_dst = 20 # Number of cm away from copter that obstacle avoidance will be triggered
 
 targalt = 6 # target altitude that vehicle will fly at (meters)
 
@@ -44,12 +54,18 @@ wplist = [[1,38.9260971,-92.3299813,targalt], # list format: [wp#,lat,lon,alt]
 def sersplit(sens): # Function that takes the serial stream and translates into NSEW
     if sens.startswith('#'): #and sens1.endswith('$'): Had to take out endswith due to unknown char
         sens1 = sens.partition('#')[-1].rpartition('$')[0] #removes start and end symbol
+        
+        n1,s1,e1,w1 = sens1.split(".")
         global n,s,e,w
-        n,s,e,w = sens1.split(".")
-        print ("n=" + n) # arduino pin #5
-        print ("s=" + s) # arduino pin #6
-        print ("e=" + e) # arduino pin #7
-        print ("w=" + w) # arduino pin #8
+        print ("n=" + n1) # arduino pin #4
+        print ("s=" + s1) # arduino pin #6
+        print ("e=" + e1) # arduino pin #7
+        print ("w=" + w1) # arduino pin #8
+        n = int(n1)
+        s = int(s1)
+        e = int(e1)
+        w = int(w1)
+        
         
         while n < avoid_dst or s < avoid_dst or e < avoid_dst or w < avoid_dst:
             detected = True
@@ -61,10 +77,10 @@ def sersplit(sens): # Function that takes the serial stream and translates into 
     else:
         print ("Improper format or no connection")
         
-    if detected = True:
-        return True
-    elif detected = False
-        return False
+#    if detected == True:
+#        return True
+#    elif detected == False:
+#        return False
 
 def location_callback(self, attr_name, value): # gets location and returns string
     #global locstr
@@ -214,6 +230,7 @@ def send_ned_velocity(velocity_x, velocity_y, velocity_z, duration):
         time.sleep(1)
 	
 def obstacle_sensed(n, s, e, w): # Function to do obstacle avoidance
+
     #while n < avoid_dst:        
     #while s < avoid_dst:        
     #while e < avoid_dst:  
@@ -222,185 +239,185 @@ def obstacle_sensed(n, s, e, w): # Function to do obstacle avoidance
     
     # assuming UAV is continuously set to true north
     '''
-'''
-# CHECK FORWARD/NORTH
-	while n < avoid_dst:
-		if w > avoid_dst or e > avoid_dst:
-			if w > e:
-				print ("move west")
-				send_ned_velocity(0, -0.5, 0, 1)
-			else:
-				print ("move east")
-				send_ned_velocity(0, 0.5, 0, 1)
-	    	else:
-			print ("move south")
-			send_ned_velocity(-0.5, 0, 0, 1)
-			
-# CHECK LEFT/WEST			
-	while w < avoid_dst:
-		if n > avoid_dst or e > avoid_dst:
-			if n > e:
-				print ("move north")
-				send_ned_velocity(0.5, 0, 0, 1)
-			else:
-				print ("move north")
-				send_ned_velocity(0.5,0, 0, 1)
-		else:
-			print ("move east")
-			send_ned_velocity(0, 0.5, 0, 1)
-'''
-			
+    '''
+    # CHECK FORWARD/NORTH
+    while n < avoid_dst:
+        if w > avoid_dst or e > avoid_dst:
+            if w > e:
+                print ("move west")
+                send_ned_velocity(0, -0.5, 0, 1)
+            else:
+                print ("move east")
+                send_ned_velocity(0, 0.5, 0, 1)
+            else:
+            print ("move south")
+            send_ned_velocity(-0.5, 0, 0, 1)
+            
+    # CHECK LEFT/WEST           
+    while w < avoid_dst:
+        if n > avoid_dst or e > avoid_dst:
+            if n > e:
+                print ("move north")
+                send_ned_velocity(0.5, 0, 0, 1)
+            else:
+                print ("move north")
+                send_ned_velocity(0.5,0, 0, 1)
+        else:
+            print ("move east")
+            send_ned_velocity(0, 0.5, 0, 1)
+    '''
+            
 # trying to lump everything into a single while loop
 # there are 15 different combinations, this will address them each individually
 # we can try to make it more concise later as we troubleshoot
-	while avoid == True:
-		get_bearing(vehicle.location.global_frame, next_waypoint(wp))	# should determine the bearing to the next wp
-		while n < avoid_dst or w < avoid_dst or e < avoid_dst or s < avoid_dst:
+    while avoid == True:
+#        get_bearing(vehicle.location.global_frame, next_waypoint(wp))   # should determine the bearing to the next wp
+        while n < avoid_dst or w < avoid_dst or e < avoid_dst or s < avoid_dst:
 # If the next wp is north: bearing 0 to 90 or 270 to 360
 # If the next wp is south: bearing 90 to 180
-			# checking if object detected in 1 DIRECTION
-			if n < avoid_dst and w > avoid_dst and e > avoid_dst and s > avoid_dst:
-				print ("Object detected north")
-				if w > e and w > s:
-					send_ned_velocity(0, -0.5, 0, 1)
-					print ("Move west")
-				elif e > w and e > s:
-					send_ned_velocity(0, 0.5, 0, 1)
-					print ("Move east")
-				elif s > e and s > w:
-					send_ned_velocity(-0.5, 0, 0, 1)
-					print ("Move south")
-				else:
-					send_ned_velocity(0, 0.5, 0, 1)		# sending east in the event that some are equal
-			elif w < avoid_dst and n > avoid_dst and e > avoid_dst and s > avoid_dst:
-				print ("Object detected west")
-				if n > e and n > s:
-					send_ned_velocity(0.5, 0, 0, 1)
-					print ("Move north")
-				elif e > n and e > s:
-					send_ned_velocity(0, 0.5, 0, 1)
-					print ("Move east")
-				elif s > e and s > n:
-					send_ned_velocity(-0.5, 0, 0, 1)
-					print ("Move south")
-				else:
-					send_ned_velocity(0.5, 0, 0, 1)		# sending north in the event that some are equal
-			elif e < avoid_dst and n > avoid_dst and w > avoid_dst and s > avoid_dst:
-				print ("Object detected east")
-				if n > w and n > s:
-					send_ned_velocity(0.5, 0, 0, 1)
-					print ("Move north")
-				elif w > n and w > s:
-					send_ned_velocity(0, -0.5, 0, 1)
-					print ("Move west")
-				elif s > n and s > w:
-					send_ned_velocity(-0.5, 0, 0, 1)
-					print ("Move south")
-				else:
-					send_ned_velocity(0.5, 0, 0, 1)		# sending north in the event that some are equal
-			elif s < avoid_dst and n > avoid_dst and e > avoid_dst and w > avoid_dst:
-				print ("Object detected south")
-				if n > e and n > w:
-					send_ned_velocity(0.5, 0, 0, 1)
-					print ("Move north")
-				elif e > w and e > n:
-					send_ned_velocity(0, 0.5, 0, 1)
-					print ("Move east")
-				elif w > e and w > n:
-					send_ned_velocity(0, -0.5, 0, 1)
-					print ("Move west")
-				else:
-					send_ned_velocity(0, 0.5, 0, 1)		# sending east in the event that some are equal
+            # checking if object detected in 1 DIRECTION
+            if n < avoid_dst and w > avoid_dst and e > avoid_dst and s > avoid_dst:
+                print ("Object detected north")
+                if w > e and w > s:
+                    send_ned_velocity(0, -0.5, 0, 1)
+                    print ("Move west")
+                elif e > w and e > s:
+                    send_ned_velocity(0, 0.5, 0, 1)
+                    print ("Move east")
+                elif s > e and s > w:
+                    send_ned_velocity(-0.5, 0, 0, 1)
+                    print ("Move south")
+                else:
+                    send_ned_velocity(0, 0.5, 0, 1)     # sending east in the event that some are equal
+            elif w < avoid_dst and n > avoid_dst and e > avoid_dst and s > avoid_dst:
+                print ("Object detected west")
+                if n > e and n > s:
+                    send_ned_velocity(0.5, 0, 0, 1)
+                    print ("Move north")
+                elif e > n and e > s:
+                    send_ned_velocity(0, 0.5, 0, 1)
+                    print ("Move east")
+                elif s > e and s > n:
+                    send_ned_velocity(-0.5, 0, 0, 1)
+                    print ("Move south")
+                else:
+                    send_ned_velocity(0.5, 0, 0, 1)     # sending north in the event that some are equal
+            elif e < avoid_dst and n > avoid_dst and w > avoid_dst and s > avoid_dst:
+                print ("Object detected east")
+                if n > w and n > s:
+                    send_ned_velocity(0.5, 0, 0, 1)
+                    print ("Move north")
+                elif w > n and w > s:
+                    send_ned_velocity(0, -0.5, 0, 1)
+                    print ("Move west")
+                elif s > n and s > w:
+                    send_ned_velocity(-0.5, 0, 0, 1)
+                    print ("Move south")
+                else:
+                    send_ned_velocity(0.5, 0, 0, 1)     # sending north in the event that some are equal
+            elif s < avoid_dst and n > avoid_dst and e > avoid_dst and w > avoid_dst:
+                print ("Object detected south")
+                if n > e and n > w:
+                    send_ned_velocity(0.5, 0, 0, 1)
+                    print ("Move north")
+                elif e > w and e > n:
+                    send_ned_velocity(0, 0.5, 0, 1)
+                    print ("Move east")
+                elif w > e and w > n:
+                    send_ned_velocity(0, -0.5, 0, 1)
+                    print ("Move west")
+                else:
+                    send_ned_velocity(0, 0.5, 0, 1)     # sending east in the event that some are equal
 
-			# checking if object detected in 2 DIRECTIONS
-			elif n < avoid_dst and e < avoid_dst and w > avoid_dst and s > avoid_dst:
-				print ("Object detected north and east")
-				if w > s:
-					send_ned_velocity(0, -0.5, 0, 1)
-					print ("Move west")
-				elif s > w:
-					send_ned_velocity(-0.5, 0, 0, 1)
-					print ("Move south")
-				else:
-					send_ned_velocity(0, -0.5, 0, 1)
-			elif n < avoid_dst and w < avoid_dst and e > avoid_dst and s > avoid_dst:
-				print ("Object detected north and west")
-				if e > s:
-					send_ned_velocity(0, 0.5, 0, 1)
-					print ("Move east")
-				elif s > e:
-					send_ned_velocity(-0.5, 0, 0, 1)
-					print ("Move south")
-				else:
-					send_ned_velocity(0, 0.5, 0, 1)
-			elif n < avoid_dst and s < avoid_dst and e > avoid_dst and w > avoid_dst:
-				print ("Object detected north and south")
-				if e > w:
-					send_ned_velocity(0, 0.5, 0, 1)
-					print ("Move east")
-				elif w > e:
-					send_ned_velocity(0, -0.5, 0, 1)
-					print ("Move west")
-				else:
-					send_ned_velocity(0, 0.5, 0, 1)
-			elif e < avoid_dst and w < avoid_dst and n > avoid_dst and s > avoid_dst:
-				print ("Object detected east and west")
-				if n > s:
-					send_ned_velocity(0.5, 0, 0, 1)
-					print ("Move north")
-				elif s > n:
-					send_ned_velocity(-0.5, 0, 0, 1)
-					print ("Move south")
-				else:
-					send_ned_velocity(0.5, 0, 0, 1)
-			elif e < avoid_dst and s < avoid_dst and n > avoid_dst and w > avoid_dst:
-				print ("Object detected east and south")
-				if n > w:
-					send_ned_velocity(0.5, 0, 0, 1)
-					print ("Move north")
-				elif w > n:
-					send_ned_velocity(0, -0.5, 0, 1)
-					print ("Move west")
-				else:
-					send_ned_velocity(0.5, 0, 0, 1)
-			elif w < avoid_dst and s < avoid_dst and n > avoid_dst and e > avoid_dst:
-				print ("Object detected west and south")
-				if n > e:
-					send_ned_velocity(0.5, 0, 0, 1)
-					print ("Move north")
-				elif e > n:
-					send_ned_velocity(0, 0.5, 0, 1)
-					print ("Move east")
-				else:
-					send_ned_velocity(0.5, 0, 0, 1)
+            # checking if object detected in 2 DIRECTIONS
+            elif n < avoid_dst and e < avoid_dst and w > avoid_dst and s > avoid_dst:
+                print ("Object detected north and east")
+                if w > s:
+                    send_ned_velocity(0, -0.5, 0, 1)
+                    print ("Move west")
+                elif s > w:
+                    send_ned_velocity(-0.5, 0, 0, 1)
+                    print ("Move south")
+                else:
+                    send_ned_velocity(0, -0.5, 0, 1)
+            elif n < avoid_dst and w < avoid_dst and e > avoid_dst and s > avoid_dst:
+                print ("Object detected north and west")
+                if e > s:
+                    send_ned_velocity(0, 0.5, 0, 1)
+                    print ("Move east")
+                elif s > e:
+                    send_ned_velocity(-0.5, 0, 0, 1)
+                    print ("Move south")
+                else:
+                    send_ned_velocity(0, 0.5, 0, 1)
+            elif n < avoid_dst and s < avoid_dst and e > avoid_dst and w > avoid_dst:
+                print ("Object detected north and south")
+                if e > w:
+                    send_ned_velocity(0, 0.5, 0, 1)
+                    print ("Move east")
+                elif w > e:
+                    send_ned_velocity(0, -0.5, 0, 1)
+                    print ("Move west")
+                else:
+                    send_ned_velocity(0, 0.5, 0, 1)
+            elif e < avoid_dst and w < avoid_dst and n > avoid_dst and s > avoid_dst:
+                print ("Object detected east and west")
+                if n > s:
+                    send_ned_velocity(0.5, 0, 0, 1)
+                    print ("Move north")
+                elif s > n:
+                    send_ned_velocity(-0.5, 0, 0, 1)
+                    print ("Move south")
+                else:
+                    send_ned_velocity(0.5, 0, 0, 1)
+            elif e < avoid_dst and s < avoid_dst and n > avoid_dst and w > avoid_dst:
+                print ("Object detected east and south")
+                if n > w:
+                    send_ned_velocity(0.5, 0, 0, 1)
+                    print ("Move north")
+                elif w > n:
+                    send_ned_velocity(0, -0.5, 0, 1)
+                    print ("Move west")
+                else:
+                    send_ned_velocity(0.5, 0, 0, 1)
+            elif w < avoid_dst and s < avoid_dst and n > avoid_dst and e > avoid_dst:
+                print ("Object detected west and south")
+                if n > e:
+                    send_ned_velocity(0.5, 0, 0, 1)
+                    print ("Move north")
+                elif e > n:
+                    send_ned_velocity(0, 0.5, 0, 1)
+                    print ("Move east")
+                else:
+                    send_ned_velocity(0.5, 0, 0, 1)
 
-			# checking if object detected in 3 DIRECTIONS
-			elif n < avoid_dst and e < avoid_dst and w< avoid_dst and s > avoid_dst:
-				print ("Object detected north, east, and west")
-				send_ned_velocity(-0.5, 0, 0, 1)
-				print ("Move south")
-			elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w > avoid_dst:
-				print ("Object detected north, east, and south")
-				send_ned_velocity(0, -0.5, 0, 1)
-				print ("Move west")
-			elif n < avoid_dst and s < avoid_dst and w < avoid_dst and e > avoid_dst:
-				print ("Object detected north, south, and west")
-				send_ned_velocity(0, 0.5, 0, 1)
-				print ("Move east")
-			elif e < avoid_dst and s < avoid_dst and w < avoid_dst and n > avoid_dst:
-				print ("Object detected east, south, and west")
-				send_ned_velocity(0.5, 0, 0, 1)
-				print ("Move north")
+            # checking if object detected in 3 DIRECTIONS
+            elif n < avoid_dst and e < avoid_dst and w< avoid_dst and s > avoid_dst:
+                print ("Object detected north, east, and west")
+                send_ned_velocity(-0.5, 0, 0, 1)
+                print ("Move south")
+            elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w > avoid_dst:
+                print ("Object detected north, east, and south")
+                send_ned_velocity(0, -0.5, 0, 1)
+                print ("Move west")
+            elif n < avoid_dst and s < avoid_dst and w < avoid_dst and e > avoid_dst:
+                print ("Object detected north, south, and west")
+                send_ned_velocity(0, 0.5, 0, 1)
+                print ("Move east")
+            elif e < avoid_dst and s < avoid_dst and w < avoid_dst and n > avoid_dst:
+                print ("Object detected east, south, and west")
+                send_ned_velocity(0.5, 0, 0, 1)
+                print ("Move north")
 
-			# checking if object detected in 4 DIRECTIONS
-			elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w < avoid_dst:
-				print ("Object detected north, east, south, and west")
-				print ("You are surrounded")
-				send_ned_velocity(0, 0, -0.5, 1)
-				print ("Move up")		# moves up if it is surrounded to go over the objects
+            # checking if object detected in 4 DIRECTIONS
+            elif n < avoid_dst and e < avoid_dst and s < avoid_dst and w < avoid_dst:
+                print ("Object detected north, east, south, and west")
+                print ("You are surrounded")
+                send_ned_velocity(0, 0, -0.5, 1)
+                print ("Move up")       # moves up if it is surrounded to go over the objects
 
-			else:
-				print ("The situation did not fall into any category--TROUBLESHOOT")
+            else:
+                print ("The situation did not fall into any category--TROUBLESHOOT")
 			
 '''
 # CHECK FORWARD/NORTH
@@ -467,18 +484,21 @@ def obstacle_sensed(n, s, e, w): # Function to do obstacle avoidance
 # CODE TO FLY    
 
 ser=serial.Serial("/dev/ttyUSB0", 9600, timeout=5)  # Opens serial stream
-while avoid = True:
+while avoid == True:
     sersplit(ser.readline()) # Note: currently must restart shell to end stream. Don't close port
-else detected = False
+#else:
+#    detected == False
 
-while headlock = True:
+while headlock == True:
 	condition_yaw(0, True)
+	print "Heading locked."
 
-    ## ---------Connecting to the Pixhawk---------
 
-vehicle=connect('/dev/serial0', baud=57600, wait_ready=True) # Connects to Pixhawk
 
     ## ---------Adding location and heading listeners---------
 
 vehicle.add_attribute_listener('location.global_frame', location_callback) # listener constantly calls location
 vehicle.add_attribute_listener('heading', heading_callback) # listener constantly calls heading
+
+
+
