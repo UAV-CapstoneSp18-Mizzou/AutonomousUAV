@@ -1,20 +1,15 @@
 #include <MegunoLink.h>
-
 // Define pins to be used. On Arduino "D9, D10, D11, D12"
 const int pwPin1 = 9; //North
 const int pwPin2 = 10; //South
 const int pwPin3 = 11;  //East
 const int pwPin4 = 12; //West
-
 //variables to store values
 long pulse1, pulse2, pulse3, pulse4, cm1, cm2, cm3, cm4, cm_1, cm_2, cm_3, cm_4;
-
 void setup()
 {
   //This opens up a serial connection to shoot the results back to the PC console
   Serial.begin(9600);
-
-
 }
 
 void loop()
@@ -41,21 +36,15 @@ void loop()
   cm_4 = 0.8529*cm_4+0.1471*cm4;
 
   Serial.print("#");
-  
   Serial.print(cm_1, DEC); // Pin #9
   Serial.print(".");
-
   Serial.print(cm_2, DEC); // Pin #10
   Serial.print(".");
-
   Serial.print(cm_3, DEC); // Pin #11
   Serial.print(".");
-
   Serial.print(cm_4, DEC); // Pin #12
   Serial.print("$");
-
   Serial.println();
-
 //  TimePlot Plot;
 //  Plot.SendData("Filtered cm1", cm_1);
 //  //Plot.SendData("Raw1", cm1);
